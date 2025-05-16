@@ -1,10 +1,10 @@
 import { Controller, FileTypeValidator, Get, MaxFileSizeValidator, ParseFilePipe, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiConsumes, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserOrderService } from '../services/user-order.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Express } from 'express';
 import { diskStorage } from 'multer';
-import path from 'path';
+import * as path from 'path';
 import { UserOrderImportDto } from 'src/dtos/user-order-import.dto';
 
 @ApiTags('userOrder')
@@ -21,24 +21,40 @@ export class UserOrderController {
     type: UserOrderImportDto,
   })
   @Post()
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Arquivo para importação',
+    required: true,
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
   @UseInterceptors(FileInterceptor('file', {
-    storage: diskStorage({
-      destination: './uploads',
-      filename: (req, file, callback) => {
-        const filename = path.parse(file.originalname).name.replace(/\s/g, '') + Date.now();
-        const extension = path.parse(file.originalname).ext;
-        callback(null, `${filename}${extension}`)
-      }
-    })
-  }))
+      storage: diskStorage({
+        destination: './uploads',
+        filename: (req, file, callback) => {
+          const filename = path.parse(file.originalname).name.replace(/\s/g, '') + Date.now();
+          const extension = path.parse(file.originalname).ext;
+          callback(null, `${filename}${extension}`)
+        }
+      })
+    }))
   async importUserOrders(
     @UploadedFile(new ParseFilePipe({
       validators: [
         new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 5 }),
-        new FileTypeValidator({ fileType: 'text/plain' }),
       ],
     })) file: Express.Multer.File,
   ): Promise<UserOrderImportDto> {
-      return await this.userOrderService.importFromTxt(file.path);
+      console.log('Processing file upload...');
+      const result = await this.userOrderService.importFromTxt(file.path);
+      console.log('File processing completed.');
+      return result;
   }
 }

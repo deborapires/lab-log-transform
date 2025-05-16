@@ -20,11 +20,12 @@ import { ConfigModule } from '@nestjs/config';
       entities: [UserOrderEntity],
       synchronize: true, 
     }),
+    TypeOrmModule.forFeature([UserOrderEntity]),
     MulterModule.register({
       dest: './uploads',
     }),
   ],
   controllers: [UserOrderController],
-  providers: [UserOrderService],
+  providers: [ UserOrderService],
 })
 export class AppModule {}

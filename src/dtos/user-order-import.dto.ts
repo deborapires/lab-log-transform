@@ -5,5 +5,5 @@ export class UserOrderImportDto {
     successCount: number;
 
     @ApiProperty()
-    errors: { orderId: number }[];
+    errors: number[];
 }

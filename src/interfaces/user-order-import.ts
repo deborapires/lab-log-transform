@@ -1,8 +1,7 @@
 export interface UserOrderImportResult {
   successCount: number;
-  errors: { orderId: number }[];
+  errors: number[];
 }
-
 export interface ParsedLineResult {
   userId: number;
   name: string;
