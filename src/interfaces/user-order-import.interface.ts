@@ -1,8 +1,8 @@
-export interface UserOrderImportResult {
+export interface IUserOrderImportResult {
   successCount: number;
   errors: number[];
 }
-export interface ParsedLineResult {
+export interface IParsedLineResult {
   userId: number;
   name: string;
   orderId: number;

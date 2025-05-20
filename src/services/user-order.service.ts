@@ -1,18 +1,19 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import * as fs from 'fs';
-import * as readline from 'readline';
-import { ParsedLineResult, UserOrderImportResult } from 'src/interfaces/user-order-import';
+import { IParsedLineResult, IUserOrderImportResult } from 'src/interfaces/user-order-import.interface';
 import { UserOrderEntity } from '../entities/userOrderEntity';
+import { UserOrderRequestDto } from 'src/dtos/user-order-request.dto';
+import { UserOrderResponseDto } from 'src/dtos/user-order-response.dto';
+import { UserOrderRepository } from 'src/repositories/userOrderRepository';
+import { plainToInstance } from 'class-transformer';
 
 @Injectable()
 export class UserOrderService {
-  private readonly logger = new Logger(UserOrderService.name);
+  constructor(private dataSource: DataSource, private userOrderRepository: UserOrderRepository) {}
 
-  constructor(private dataSource: DataSource) {}
-
-  async importFromTxt(filePath: string): Promise<UserOrderImportResult> {
-    this.logger.log(`Starting import from file: ${filePath}`);
+  async importFromTxt(filePath: string): Promise<IUserOrderImportResult> {
+    console.log(`Starting import from file: ${filePath}`);
 
     const batchSize = 100;
     const batchEntities: Partial<UserOrderEntity>[] = [];
@@ -28,7 +29,7 @@ export class UserOrderService {
     const errors: number[] = [];
 
     try {
-      this.logger.log('Reading file in chunks...');
+      console.log('Reading file in chunks...');
       for await (const chunk of stream) {
         leftover += chunk;
         const lines = leftover.split(/\r?\n/);
@@ -69,10 +70,10 @@ export class UserOrderService {
       }
 
       await queryRunner.commitTransaction();
-      this.logger.log(`Import completed. Success: ${successCount}, Errors: ${errors.length}`);
+      console.log(`Import completed. Success: ${successCount}, Errors: ${errors.length}`);
     } catch (err) {
       await queryRunner.rollbackTransaction();
-      this.logger.error(`Error during import: ${err.message}`, err.stack);
+      console.error(`Error during import: ${err.message}`, err.stack);
     } finally {
       await queryRunner.release();
     }
@@ -83,7 +84,24 @@ export class UserOrderService {
     };
   }
 
-  private parseLine(line: string): ParsedLineResult | null {
+  async getUserOrder(params: UserOrderRequestDto): Promise<UserOrderResponseDto[]>{
+    const userOrder = await this.userOrderRepository.listUserOrders(params);
+
+    const userOrderItems = userOrder.items;
+
+    const usersOrders: UserOrderResponseDto[] = plainToInstance(
+      UserOrderResponseDto,
+      userOrderItems,
+      {
+        excludeExtraneousValues: true,
+      },
+    );
+
+    return usersOrders;
+
+  }
+
+  private parseLine(line: string): IParsedLineResult | null {
     const sizes = [10, 45, 10, 10, 12, 8];
     let pos = 0;
     const fields: string[] = [];
@@ -105,7 +123,7 @@ export class UserOrderService {
 
       return { userId, name, orderId, productId, productValue, purchaseDate };
     } catch (error) {
-      this.logger.warn(`Error parsing line: ${line}, returning null.`, error.stack);
+      console.warn(`Error parsing line: ${line}, returning null.`, error.stack);
       return null;
     }
   }
@@ -116,7 +134,7 @@ export class UserOrderService {
       const orderId = parseInt(orderIdStr, 10);
       return isNaN(orderId) ? null : orderId;
     } catch (error) {
-      this.logger.warn(`Could not extract orderId from line: ${line}.`, error.stack);
+      console.warn(`Could not extract orderId from line: ${line}.`, error.stack);
       return null;
     }
   }
