@@ -1,15 +1,15 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Between, In, Repository } from 'typeorm';
+import { Between, In, Repository, DataSource} from 'typeorm';
 import { UserOrderEntity } from '../entities/userOrderEntity';
 import { UserOrderRequestDto } from 'src/dtos/user-order-request.dto';
+import { InjectDataSource } from '@nestjs/typeorm';
 
-@Injectable()
-export class UserOrderRepository {
+export class UserOrderRepository extends Repository<UserOrderEntity> {
   constructor(
-    @InjectRepository(UserOrderEntity, 'reader')
-    private readonly readerRepository: Repository<UserOrderEntity>,
-  ) {}
+    @InjectDataSource('writer')
+    dataSource: DataSource,
+  ) {
+    super(UserOrderEntity, dataSource.createEntityManager());
+  }
 
 async listUserOrders(
   filter: UserOrderRequestDto,
@@ -21,10 +21,8 @@ items: UserOrderEntity[];
   const limit =  100; //can be passed by parameter 
   const whereConditions: any = {};
 
-    if (filter.orderId !== undefined && filter.orderId !== null) {
-    whereConditions.id = Array.isArray(filter.orderId)
-      ? In(filter.orderId)
-      : filter.orderId;
+  if (filter.orderId) {
+    whereConditions.orderId = In(filter.orderId);
   }
 
   if (filter.startDate) {
@@ -40,7 +38,7 @@ items: UserOrderEntity[];
     whereConditions.createdAt = Between(start, end);
   }
 
-  const [items, total] = await this.readerRepository.findAndCount({
+  const [items, total] = await this.findAndCount({
     where: Object.keys(whereConditions).length ? whereConditions : null,
     skip: (page - 1) * limit,
     take: limit,

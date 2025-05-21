@@ -1,4 +1,4 @@
-import { Controller, FileTypeValidator, Get, MaxFileSizeValidator, ParseFilePipe, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Controller, FileTypeValidator, Get, MaxFileSizeValidator, ParseFilePipe, Post, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { ApiBody, ApiConsumes, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserOrderService } from '../services/user-order.service';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -6,6 +6,8 @@ import { Express } from 'express';
 import { diskStorage } from 'multer';
 import * as path from 'path';
 import { UserOrderImportDto } from 'src/dtos/user-order-import.dto';
+import { UserOrderResponseDto } from 'src/dtos/user-order-response.dto';
+import { UserOrderRequestDto } from 'src/dtos/user-order-request.dto';
 
 @ApiTags('userOrder')
 @Controller({
@@ -15,6 +17,10 @@ import { UserOrderImportDto } from 'src/dtos/user-order-import.dto';
 export class UserOrderController {
   constructor(private readonly userOrderService: UserOrderService) {}
 
+  @ApiOperation({
+    description: 'Import file for transformer',
+    operationId: 'importFileUserOrders',
+  })
   @ApiResponse({
     status: 200,
     description: 'Return of the import with the total number of successful records and the ids of the orders with import errors.',
@@ -56,5 +62,22 @@ export class UserOrderController {
       const result = await this.userOrderService.importFromTxt(file.path);
       console.log('File processing completed.');
       return result;
+  }
+
+  @ApiOperation({
+    description: 'List of user orders',
+    operationId: 'listUserOrders',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Listing of user orders',
+    type: UserOrderResponseDto,
+  })
+  @Get()
+    async listUserOrders(@Query() filter: UserOrderRequestDto): Promise<UserOrderResponseDto[]> {
+    console.log(
+      `list user orders has been called with params: ${JSON.stringify(filter)}`,
+    );
+    return this.userOrderService.getUserOrder(filter);
   }
 }

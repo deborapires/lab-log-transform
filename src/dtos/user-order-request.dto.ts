@@ -2,15 +2,15 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsOptional } from 'class-validator';
 
 export class UserOrderRequestDto {
-    @ApiProperty()
+    @ApiProperty({ required: false })
     @IsOptional()
-    orderId?:  number | number[];
+    orderId?: number[];
 
-    @ApiProperty()
+    @ApiProperty({ required: false })
     @IsOptional()
     startDate?: string;
 
-    @ApiProperty()
+    @ApiProperty({ required: false })
     @IsOptional()
     endDate?: string;
 }

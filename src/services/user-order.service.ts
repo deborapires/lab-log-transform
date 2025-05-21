@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import * as fs from 'fs';
 import { IParsedLineResult, IUserOrderImportResult } from 'src/interfaces/user-order-import.interface';
@@ -10,7 +10,11 @@ import { plainToInstance } from 'class-transformer';
 
 @Injectable()
 export class UserOrderService {
-  constructor(private dataSource: DataSource, private userOrderRepository: UserOrderRepository) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    @Inject('UserOrderRepository')
+    private readonly userOrderRepository: UserOrderRepository,
+  ) {}
 
   async importFromTxt(filePath: string): Promise<IUserOrderImportResult> {
     console.log(`Starting import from file: ${filePath}`);
@@ -86,19 +90,42 @@ export class UserOrderService {
 
   async getUserOrder(params: UserOrderRequestDto): Promise<UserOrderResponseDto[]>{
     const userOrder = await this.userOrderRepository.listUserOrders(params);
+    const usersMap = new Map<number, { userId: number; name: string; orders: Map<number, any> }>();
 
-    const userOrderItems = userOrder.items;
+    for (const item of userOrder.items) {
+      if (!usersMap.has(item.userId)) {
+        const lastName = item.name.trim().split(' ').slice(-1)[0];
+        usersMap.set(item.userId, {
+          userId: item.userId,
+          name: lastName,
+          orders: new Map(),
+        });
+      }
 
-    const usersOrders: UserOrderResponseDto[] = plainToInstance(
-      UserOrderResponseDto,
-      userOrderItems,
-      {
-        excludeExtraneousValues: true,
-      },
-    );
+      const user = usersMap.get(item.userId)!;
 
-    return usersOrders;
+      if (!user.orders.has(item.orderId)) {
+        user.orders.set(item.orderId, {
+          order_id: item.orderId,
+          total: 0,
+          date: new Date(item.purchaseDate).toISOString().split('T')[0],
+          products: [],
+        });
+      }
 
+      const order = user.orders.get(item.orderId)!;
+
+      order.products.push({ product_id: item.productId, value: item.productValue });
+      order.total += item.productValue;
+    }
+
+    const result: UserOrderResponseDto[] = Array.from(usersMap.values()).map(user => ({
+      userId: user.userId,
+      name: user.name,
+      orders: Array.from(user.orders.values()),
+    }));
+
+    return result;
   }
 
   private parseLine(line: string): IParsedLineResult | null {

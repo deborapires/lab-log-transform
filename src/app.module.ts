@@ -1,10 +1,13 @@
 import { Module } from '@nestjs/common';
-import { UserOrderController } from './controllers/user-order.controller'; // Importe o controller
-import { UserOrderService } from './services/user-order.service'; // Importe o service
+import { UserOrderController } from './controllers/user-order.controller';
+import { UserOrderService } from './services/user-order.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserOrderEntity } from './entities/userOrderEntity';
 import { MulterModule } from '@nestjs/platform-express';
 import { ConfigModule } from '@nestjs/config';
+import { UserOrderRepository } from './repositories/userOrderRepository';
+import { DataSource } from 'typeorm';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +29,13 @@ import { ConfigModule } from '@nestjs/config';
     }),
   ],
   controllers: [UserOrderController],
-  providers: [ UserOrderService],
+  providers: [
+    UserOrderService,
+    {
+      provide: 'UserOrderRepository',
+      useFactory: (dataSource: DataSource) => new UserOrderRepository(dataSource),
+      inject: [DataSource],
+    },
+  ],
 })
 export class AppModule {}

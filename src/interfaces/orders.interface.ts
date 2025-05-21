@@ -2,7 +2,7 @@ import { IProducts } from "./products.interface";
 
 export interface IOrders {
     orderId: number;
-    total: string;
+    total: number;
     date: string;
     products: IProducts;
 }
