@@ -23,7 +23,7 @@
 
 ## Description
 
-Project responsible for importing and processing customer order data. A txt file is expected, which is read, parsed and the data is persisted in a PostgreSQL database. This data can then be queried using a number of filters and returned in JSON. Data is imported and read via the endpoints provided (GET/POST). 
+Project responsible for importing and processing customer order data. Developed with the NestJs framework in the TypeScript language. A txt file is expected, which is read, parsed and the data is persisted in a PostgreSQL database. This data can then be queried using a number of filters and returned in JSON. Data is imported and read via the endpoints provided (GET/POST). 
 
 ## Project setup
 
