@@ -44,8 +44,6 @@ $ npm run docker:up
 # run application 
 $ npm run start
 
-# localhost:3000/api#
-
 ```
 
 ## Swagger 
