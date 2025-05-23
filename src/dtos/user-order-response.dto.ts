@@ -3,7 +3,7 @@ import { IOrders } from "src/interfaces/orders.interface";
 
 export class UserOrderResponseDto {
     @ApiProperty()
-    userId: number;
+    user_id: number;
 
     @ApiProperty()
     name: string;

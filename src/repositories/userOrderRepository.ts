@@ -20,26 +20,24 @@ items: UserOrderEntity[];
   const page =  1; //can be passed by parameter 
   const limit =  100; //can be passed by parameter 
   const whereConditions: any = {};
-
-  if (filter.orderId) {
-    whereConditions.orderId = In(filter.orderId);
+if (filter.orderId) {
+    const orderIdNumber = Array.isArray(filter.orderId)
+      ? filter.orderId.map(id => parseInt(id as any, 10))
+      : [parseInt(filter.orderId as any, 10)];
+    whereConditions.orderId = In(orderIdNumber);
   }
 
   if (filter.startDate) {
-    const start = new Date(filter.startDate);
-    const end = filter.endDate
-      ? new Date(`${filter.endDate}T23:59:59.999Z`)
-      : (() => {
-          const d = new Date(start);
-          d.setHours(23, 59, 59, 999);
-          return d;
-        })();
+    const startNumber = this.dateToNumber(filter.startDate);
+    const endNumber = filter.endDate
+      ? this.dateToNumber(filter.endDate)
+      : startNumber;
 
-    whereConditions.createdAt = Between(start, end);
+    whereConditions.purchaseDate = Between(startNumber, endNumber);
   }
 
   const [items, total] = await this.findAndCount({
-    where: Object.keys(whereConditions).length ? whereConditions : null,
+    where: Object.keys(whereConditions).length ? whereConditions : {},
     skip: (page - 1) * limit,
     take: limit,
   });
@@ -47,4 +45,9 @@ items: UserOrderEntity[];
 
   return { items, total };
   }
+
+  private dateToNumber(dateStr: string): number {
+  const [year, month, day] = dateStr.split('-');
+  return parseInt(`${year}${month}${day}`, 10);
+}
 }

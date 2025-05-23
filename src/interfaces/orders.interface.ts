@@ -4,5 +4,5 @@ export interface IOrders {
     orderId: number;
     total: number;
     date: string;
-    products: IProducts;
+    products: IProducts[];
 }

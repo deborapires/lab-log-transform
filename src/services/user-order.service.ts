@@ -1,12 +1,11 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import * as fs from 'fs';
-import { IParsedLineResult, IUserOrderImportResult } from 'src/interfaces/user-order-import.interface';
+import { IParsedLineResult, IUserOrderImportResult } from '../interfaces/user-order-import.interface';
 import { UserOrderEntity } from '../entities/userOrderEntity';
-import { UserOrderRequestDto } from 'src/dtos/user-order-request.dto';
-import { UserOrderResponseDto } from 'src/dtos/user-order-response.dto';
-import { UserOrderRepository } from 'src/repositories/userOrderRepository';
-import { plainToInstance } from 'class-transformer';
+import { UserOrderRequestDto } from '../dtos/user-order-request.dto';
+import { UserOrderResponseDto } from '../dtos/user-order-response.dto';
+import { UserOrderRepository } from '../repositories/userOrderRepository';
 
 @Injectable()
 export class UserOrderService {
@@ -18,6 +17,11 @@ export class UserOrderService {
 
   async importFromTxt(filePath: string): Promise<IUserOrderImportResult> {
     console.log(`Starting import from file: ${filePath}`);
+
+    if (!fs.existsSync(filePath)) {
+      console.error(`File not found: ${filePath}`);
+      return { successCount: 0, errors: [] };
+    }
 
     const batchSize = 100;
     const batchEntities: Partial<UserOrderEntity>[] = [];
@@ -104,26 +108,33 @@ export class UserOrderService {
 
       const user = usersMap.get(item.userId)!;
 
-      if (!user.orders.has(item.orderId)) {
-        user.orders.set(item.orderId, {
-          order_id: item.orderId,
-          total: 0,
-          date: new Date(item.purchaseDate).toISOString().split('T')[0],
-          products: [],
-        });
-      }
+    if (!user.orders.has(item.orderId)) {
+      const rawDate = item.purchaseDate.toString();
+      const formattedDate = `${rawDate.substring(0, 4)}-${rawDate.substring(4, 6)}-${rawDate.substring(6, 8)}`;
+
+      user.orders.set(item.orderId, {
+        order_id: item.orderId,
+        total: 0,
+        date: formattedDate,
+        products: [],
+      });
+    }
 
       const order = user.orders.get(item.orderId)!;
 
-      order.products.push({ product_id: item.productId, value: item.productValue });
-      order.total += item.productValue;
+      const productValue = parseFloat(item.productValue.toString());
+      order.products.push({ product_id: item.productId, value: productValue });
+      order.total += productValue;
     }
 
     const result: UserOrderResponseDto[] = Array.from(usersMap.values()).map(user => ({
-      userId: user.userId,
+      user_id: user.userId,
       name: user.name,
-      orders: Array.from(user.orders.values()),
-    }));
+      orders: Array.from(user.orders.values()).map(order => ({
+      ...order,
+      total: order.total.toFixed(2),
+    })),
+  }));
 
     return result;
   }
@@ -147,6 +158,16 @@ export class UserOrderService {
       const productId = parseInt(productIdStr, 10);
       const productValue = parseFloat(valueStr);
       const purchaseDate = /^\d{8}$/.test(dateStr) ? parseInt(dateStr, 10) : 0;
+
+        if (isNaN(userId) || isNaN(orderId) || isNaN(productId) || isNaN(productValue) || isNaN(purchaseDate)) {
+          console.warn(`Invalid number format in line: ${line}, returning null.`);
+          return null;
+        }
+
+        if (!name) {
+            console.warn(`Name is empty in line: ${line}, returning null.`);
+            return null;
+        }
 
       return { userId, name, orderId, productId, productValue, purchaseDate };
     } catch (error) {
