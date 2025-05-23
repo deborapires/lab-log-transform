@@ -48,6 +48,16 @@ $ npm run start
 
 ```
 
+## Swagger 
+```bash
+
+POST /user-orders
+GET /user-orders
+
+# localhost:3000/api#
+
+```
+
 ## Run tests
 
 ```bash
